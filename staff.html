@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b0d10;color:#f2f3f5}body{min-height:100vh}.wrap{min-height:100vh;padding:40px;display:grid;place-items:center}.panel{width:min(760px,100%);padding:38px;border:1px solid #303338;border-radius:18px;background:#111317;box-shadow:0 24px 70px rgba(0,0,0,.3)}.eyebrow{margin:0 0 8px;color:#949ba4;font-size:11px;font-weight:800;letter-spacing:.12em}.brand{display:flex;align-items:center;gap:14px;margin-bottom:28px}.logo{width:48px;height:48px;border-radius:14px;background:#5865f2;display:grid;place-items:center;font-weight:800}.panel h1{margin:0;font-size:32px}.welcome{color:#b5bac1;margin:8px 0 28px}.info{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.box{padding:18px;border-radius:12px;background:#181a1f;border:1px solid #2b2d31}.label{display:block;color:#949ba4;font-size:12px;margin-bottom:7px}.value{font-weight:700}.back{display:inline-block;margin-top:28px;color:#fff;text-decoration:none;background:#5865f2;padding:12px 18px;border-radius:9px;font-weight:700}.announcements{margin-top:24px;padding:18px;border-radius:12px;background:#181a1f;border:1px solid #2b2d31}.announcement-title{font-weight:800;margin-bottom:12px}.announcement-item{padding:13px 0;border-top:1px solid #2b2d31}.announcement-item:first-child{border-top:0;padding-top:0}.announcement-message{white-space:pre-wrap;line-height:1.5}.announcement-date{display:block;margin-top:7px;color:#949ba4;font-size:11px}.error{text-align:center}.error a{color:#7289da}@media(max-width:600px){.wrap{padding:18px}.panel{padding:25px}.info{grid-template-columns:1fr}}
+  .staff-handbook-box{margin-top:24px;padding:18px;border-radius:12px;background:#181a1f;border:1px solid #2b2d31}.staff-handbook-content{color:#b5bac1;line-height:1.6}.staff-handbook-page{padding:14px 0;border-top:1px solid #2b2d31}.staff-handbook-page:first-child{border-top:0;padding-top:0}.staff-handbook-page h3{margin:0 0 10px;color:#f2f3f5}.staff-handbook-page-content h1,.staff-handbook-page-content h2{color:#f2f3f5}.staff-handbook-page-content p{margin:8px 0}.staff-handbook-page-content ul,.staff-handbook-page-content ol{padding-left:24px}.staff-handbook-page-content details{margin:12px 0;padding:9px 13px;border:1px solid #2b2d31;border-radius:8px;background:#111317}.staff-handbook-page-content summary{cursor:pointer;font-weight:700;color:#f2f3f5}.staff-handbook-page-content details>div{padding:10px 2px 3px}.handbook-empty{margin:0;color:#656a73;font-size:13px}
+  .staff-login{width:min(440px,100%);padding:34px;border:1px solid #303338;border-radius:18px;background:#111317;box-shadow:0 24px 70px rgba(0,0,0,.3)}.staff-login h1{margin:0 0 8px;font-size:28px}.staff-login p{color:#b5bac1;line-height:1.5}.staff-login label{display:block;margin:16px 0 7px;font-size:13px;font-weight:700}.staff-login input{width:100%;padding:13px 14px;border:1px solid #303338;border-radius:9px;background:#0b0d10;color:#f2f3f5;font:inherit}.staff-login input:focus{outline:none;border-color:#5865f2;box-shadow:0 0 0 3px rgba(88,101,242,.15)}.staff-login button{width:100%;margin-top:18px;padding:13px;border:0;border-radius:9px;background:#5865f2;color:#fff;font-weight:700;cursor:pointer}.staff-login button:disabled{opacity:.6;cursor:wait}.staff-login-error{min-height:20px;color:#f23f42;font-size:13px}.staff-login-link{display:block;margin-top:16px;color:#7289da;text-align:center;text-decoration:none}
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <section id="staffLogin" class="staff-login">
+      <p class="eyebrow">REALM OF ELEMENTS</p>
+      <h1>Staff Login</h1>
+      <p>Authenticate with Discord first, then enter the staff username and password created by an administrator.</p>
+      <button id="discordLoginButton" type="button">Login with Discord</button>
+      <div id="staffCredentials" hidden>
+        <label for="staffUsername">Staff Username</label>
+        <input id="staffUsername" type="text" autocomplete="username">
+        <label for="staffPassword">Staff Password</label>
+        <input id="staffPassword" type="password" autocomplete="current-password">
+        <button id="staffAccessButton" type="button">Access Dashboard</button>
+      </div>
+      <p id="staffLoginError" class="staff-login-error" aria-live="polite"></p>
+      <a class="staff-login-link" href="index.html">← Return to Portal</a>
+    </section>
+    <section id="staffPanel" class="panel" hidden>
+      <div class="brand"><div class="logo">ROE</div><div><p class="eyebrow">REALM OF ELEMENTS</p><h1>Staff Dashboard</h1></div></div>
+      <p id="welcome" class="welcome"></p>
+      <div class="info">
+        <div class="box"><span class="label">Username</span><span id="username" class="value"></span></div>
+        <div class="box"><span class="label">Rank</span><span id="rank" class="value"></span></div>
+        <div class="box"><span class="label">Account Standing</span><span id="standing" class="value"></span></div>
+      </div>
+      <div class="staff-handbook-box"><div class="announcement-title">Staff Handbook</div><p style="margin:0;color:#949ba4;line-height:1.5">View the staff handbook and its pages.</p><button id="openStaffHandbook" class="back" type="button" style="border:0;cursor:pointer;margin-top:14px">Open Staff Handbook</button></div>
+      <div id="staffHandbookView" class="staff-handbook-box" hidden><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><div class="announcement-title" style="margin:0">Staff Handbook</div><button id="closeStaffHandbook" class="back" type="button" style="margin:0;border:0;cursor:pointer">← Dashboard</button></div><div id="staffHandbookContent" class="staff-handbook-content"><p class="handbook-empty">The staff handbook is currently empty.</p></div></div>
+      <div id="announcements" class="announcements" hidden>
+        <div class="announcement-title">Staff Announcements</div>
+        <div id="announcementList"></div>
+      </div>
+      <a class="back" href="index.html">Return to Portal</a>
+    </section>
+    <section id="error" class="error" hidden><h2>Staff Access Required</h2><p>Your staff session is not valid.</p><a href="index.html">Return to Staff Login</a></section>
+  </main>
+  <script>
+    const SUPABASE_URL = 'https://fprspgulugqfcuhgzkux.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_bGnodkfCOPt_mxelGVJCNg_8ya41kSF';
+    const roeSupabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const loginPanel = document.getElementById('staffLogin');
+    const dashboardPanel = document.getElementById('staffPanel');
+    const errorPanel = document.getElementById('error');
+    const discordButton = document.getElementById('discordLoginButton');
+    const credentials = document.getElementById('staffCredentials');
+    const staffUsername = document.getElementById('staffUsername');
+    const staffPassword = document.getElementById('staffPassword');
+    const accessButton = document.getElementById('staffAccessButton');
+    const loginError = document.getElementById('staffLoginError');
+    let sessionToken = sessionStorage.getItem('roe-staff-session-token');
+
+    function showCredentials(user) {
+      credentials.hidden = false;
+      discordButton.hidden = true;
+      loginError.textContent = `Discord authenticated as ${user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'your Discord account'}.`;
+      staffUsername.focus();
+    }
+
+    async function startDiscordLogin() {
+      loginError.textContent = '';
+      if (!roeSupabase) { loginError.textContent = 'Authentication service did not load. Refresh the page and try again.'; return; }
+      discordButton.disabled = true; discordButton.textContent = 'Connecting to Discord...';
+      try {
+        const { error } = await roeSupabase.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: 'https://realmofelements.online/staff.html' } });
+        if (error) throw error;
+      } catch (err) {
+        loginError.textContent = err?.message || 'Unable to start Discord login.';
+        discordButton.disabled = false; discordButton.textContent = 'Login with Discord';
+      }
+    }
+
+    async function authenticateStaff() {
+      loginError.textContent = '';
+      const username = staffUsername.value.trim();
+      const password = staffPassword.value;
+      if (!username || !password) { loginError.textContent = 'Enter your staff username and password.'; return; }
+      if (!roeSupabase) { loginError.textContent = 'Authentication service did not load. Refresh the page and try again.'; return; }
+      accessButton.disabled = true; accessButton.textContent = 'Signing in...';
+      try {
+        const { data: authData } = await roeSupabase.auth.getSession();
+        const user = authData.session?.user;
+        if (!user) throw new Error('Your Discord session is missing. Please log in with Discord again.');
+        const identity = user.identities?.find(i=>i.provider==='discord');
+        const d = identity?.identity_data || {};
+        const discordUsername = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.preferred_username || d.username || null;
+        const discordId = user.user_metadata?.provider_id || user.user_metadata?.sub || d.id || d.sub || user.id;
+        const { data, error } = await roeSupabase.rpc('verify_staff_login',{p_username:username,p_password:password,p_discord_id:discordId,p_discord_username:discordUsername});
+        if(error) throw error;
+        if(!data?.success || !data?.session_token) throw new Error('Invalid staff username or password.');
+        sessionToken = data.session_token;
+        sessionStorage.setItem('roe-staff-session-token', sessionToken);
+        await loadStaffDashboard();
+      } catch(err) {
+        loginError.textContent = err?.message || 'Invalid staff username or password.';
+        accessButton.disabled = false; accessButton.textContent = 'Access Dashboard';
+      }
+    }
+
+    discordButton.addEventListener('click', startDiscordLogin);
+    accessButton.addEventListener('click', authenticateStaff);
+    [staffUsername,staffPassword].forEach(input=>input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();authenticateStaff();}}));
+
+    async function checkExistingAuth() {
+      if (!roeSupabase) { loginError.textContent='Authentication service did not load. Refresh the page and try again.'; return; }
+      const { data } = await roeSupabase.auth.getSession();
+      if (data.session) {
+        if (sessionToken) { await loadStaffDashboard(); }
+        else showCredentials(data.session.user);
+      }
+    }
+
+    async function loadStaffDashboard() {
+      if (!sessionToken) {
+        const { data } = await roeSupabase.auth.getSession();
+        if (data.session) showCredentials(data.session.user);
+        return;
+      }
+
+      const { data: authData } = await roeSupabase.auth.getSession();
+      if (!authData.session) {
+        sessionStorage.removeItem('roe-staff-session-token');
+        sessionToken = null;
+        showError();
+        return;
+      }
+
+      const { data, error } = await roeSupabase.rpc('get_staff_session', {
+        p_session_token: sessionToken
+      });
+
+      if (error || !data?.valid) {
+        sessionStorage.removeItem('roe-staff-session-token');
+        showError();
+        return;
+      }
+
+      const member = data;
+      const strikes = Number(member.strikes || 0);
+      const standing = strikes <= 0 ? 'Good Standing' : strikes === 1 ? 'On Notice' : strikes === 2 ? 'At Risk' : 'Removal Required';
+      loginPanel.hidden = true;
+      document.getElementById('staffPanel').hidden = false;
+      document.getElementById('welcome').textContent = `Welcome, ${member.username}.`;
+      document.getElementById('username').textContent = member.username;
+      document.getElementById('rank').textContent = member.rank || 'Staff';
+      document.getElementById('standing').textContent = standing;
+
+      loadLocalStaffContent();
+    }
+
+    function showError() {
+      loginPanel.hidden = false;
+      document.getElementById('staffPanel').hidden = true;
+      document.getElementById('error').hidden = false;
+    }
+
+    function loadLocalStaffContent() {
+      const handbook = JSON.parse(localStorage.getItem('roe-staff-handbook') || '{"pages":[]}');
+      const handbookContent = document.getElementById('staffHandbookContent');
+      const handbookBox = document.querySelector('.staff-handbook-box');
+      const handbookView = document.getElementById('staffHandbookView');
+      const openHandbookButton = document.getElementById('openStaffHandbook');
+      const closeHandbookButton = document.getElementById('closeStaffHandbook');
+      let currentHandbookPageId = null;
+
+      function renderHandbookPage(pageId) {
+        if(!handbook.pages || !handbook.pages.length){ handbookContent.innerHTML='<p class="handbook-empty">The staff handbook is currently empty.</p>'; return; }
+        const page = handbook.pages.find(p=>p.id===pageId) || handbook.pages[0];
+        currentHandbookPageId = page.id;
+        handbookContent.innerHTML = '';
+        const article = document.createElement('article');
+        article.className = 'staff-handbook-page';
+        article.innerHTML = '<h3></h3><div class="staff-handbook-page-content"></div>';
+        article.querySelector('h3').textContent = page.title || 'Untitled';
+        article.querySelector('.staff-handbook-page-content').innerHTML = page.content || '';
+        handbookContent.appendChild(article);
+        handbookContent.querySelectorAll('[data-handbook-page]').forEach(link=>{
+          link.addEventListener('click', event=>{ event.preventDefault(); renderHandbookPage(link.dataset.handbookPage); handbookContent.scrollIntoView({behavior:'smooth',block:'start'}); });
+        });
+      }
+
+      function openHandbook(){ handbookBox.hidden=true; handbookView.hidden=false; renderHandbookPage(currentHandbookPageId); }
+      openHandbookButton.addEventListener('click', openHandbook);
+      closeHandbookButton.addEventListener('click', ()=>{ handbookView.hidden=true; handbookBox.hidden=false; });
+      renderHandbookPage(null);
+
+      const announcements = JSON.parse(localStorage.getItem('roe-staff-announcements') || '[]');
+      const announcementsBox = document.getElementById('announcements');
+      const announcementList = document.getElementById('announcementList');
+      if (announcements.length) {
+        announcementsBox.hidden = false;
+        announcementList.innerHTML = '';
+        announcements.slice().reverse().forEach(announcement => {
+          const item = document.createElement('div');
+          item.className = 'announcement-item';
+          item.innerHTML = '<div class="announcement-message"></div><span class="announcement-date"></span>';
+          item.querySelector('.announcement-message').textContent = announcement.message;
+          item.querySelector('.announcement-date').textContent = announcement.date || '';
+          announcementList.appendChild(item);
+        });
+      }
+    }
+
+
+    checkExistingAuth();
+  </script>
+</body>
+</html>
