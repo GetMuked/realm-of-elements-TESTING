@@ -84,17 +84,97 @@
       })();
     </script>
 
-    <section id="dashboard" class="dashboard" hidden>
-      <button id="moderationCard" class="card" type="button">
-        <span class="card-icon">▤</span>
-        <span>Moderation Records</span>
-      </button>
-      <button id="staffOverviewCard" class="card" type="button"><span class="card-icon">◉</span><span>Staff Overview</span></button>
-      <button id="staffOnboardingCard" class="card" type="button"><span class="card-icon">＋</span><span>Staff Onboarding</span></button>
-      <button id="handbookAdminCard" class="card" type="button"><span class="card-icon">▤</span><span>Informational Handbook: Admin Addition</span></button>
-      <button id="tasksCard" class="card" type="button"><span class="card-icon">✓</span><span>Tasks</span></button>
-      <button id="loginHistoryCard" class="card" type="button"><span class="card-icon">↺</span><span>Login History</span></button>
-    </section>
+   <section id="dashboard" class="dashboard" hidden>
+
+  <div class="dashboard-header">
+    <div>
+      <p class="dashboard-label">REALM OF ELEMENTS</p>
+      <h1>Admin Control Center</h1>
+      <p class="dashboard-subtitle">
+        Manage moderation, staff operations, handbook updates, tasks and security activity.
+      </p>
+    </div>
+
+    <div class="system-status">
+      <span class="status-dot"></span>
+      System Operational
+    </div>
+  </div>
+
+  <div class="dashboard-stats">
+    <div class="stat-card">
+      <span class="stat-label">Platform</span>
+      <strong>ROE</strong>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-label">Access Level</span>
+      <strong>Administrator</strong>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-label">Environment</span>
+      <strong>Production</strong>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-label">Status</span>
+      <strong>Online</strong>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+
+    <button id="moderationCard" class="card dashboard-card" type="button">
+      <span class="card-icon">🛡</span>
+      <div>
+        <h3>Moderation Records</h3>
+        <p>Review warnings, mutes and bans.</p>
+      </div>
+    </button>
+
+    <button id="staffOverviewCard" class="card dashboard-card" type="button">
+      <span class="card-icon">👥</span>
+      <div>
+        <h3>Staff Overview</h3>
+        <p>View and manage active staff.</p>
+      </div>
+    </button>
+
+    <button id="staffOnboardingCard" class="card dashboard-card" type="button">
+      <span class="card-icon">➕</span>
+      <div>
+        <h3>Staff Onboarding</h3>
+        <p>Create new staff accounts.</p>
+      </div>
+    </button>
+
+    <button id="handbookAdminCard" class="card dashboard-card" type="button">
+      <span class="card-icon">📘</span>
+      <div>
+        <h3>Staff Handbook</h3>
+        <p>Edit handbook pages and resources.</p>
+      </div>
+    </button>
+
+    <button id="tasksCard" class="card dashboard-card" type="button">
+      <span class="card-icon">✓</span>
+      <div>
+        <h3>Tasks</h3>
+        <p>Track administrative work.</p>
+      </div>
+    </button>
+
+    <button id="loginHistoryCard" class="card dashboard-card" type="button">
+      <span class="card-icon">🔐</span>
+      <div>
+        <h3>Login History</h3>
+        <p>Review authentication activity.</p>
+      </div>
+    </button>
+
+  </div>
+</section>
 
     <section id="moderation" class="moderation" hidden>
       <aside class="files-sidebar">
