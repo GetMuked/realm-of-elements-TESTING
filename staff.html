@@ -73,7 +73,7 @@
       if (!roeSupabase) { loginError.textContent = 'Authentication service did not load. Refresh the page and try again.'; return; }
       discordButton.disabled = true; discordButton.textContent = 'Connecting to Discord...';
       try {
-        const { error } = await roeSupabase.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: 'https://realmofelements.online/staff.html' } });
+        const { error } = await roeSupabase.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: 'https://getmuked.github.io/realm-of-elements-TESTING/staff.html' } });
         if (error) throw error;
       } catch (err) {
         loginError.textContent = err?.message || 'Unable to start Discord login.';
