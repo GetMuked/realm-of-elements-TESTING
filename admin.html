@@ -23,8 +23,8 @@
       // Authentication bootstrap: kept independent from the dashboard code so a dashboard
       // initialization error can never disable the Admin login button.
       (function () {
-        const url = 'https://fprspgulugqfcuhgzkux.supabase.co';
-        const key = 'sb_publishable_bGnodkfCOPt_mxelGVJCNg_8ya41kSF';
+        const url = 'https://iwxdxtomepjwtqqemgdn.supabase.co';
+        const key = 'sb_publishable_sZav1GnM-eMG7t5cyEvMLw__phYz-rT';
         const client = window.supabase?.createClient(url, key);
         window.__roeSupabaseClient = client;
         const emailInput = document.getElementById('adminEmail');
@@ -724,8 +724,8 @@
     });
 
     // Secure Supabase-backed staff management.
-    const SUPABASE_URL = 'https://fprspgulugqfcuhgzkux.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_bGnodkfCOPt_mxelGVJCNg_8ya41kSF';
+    const SUPABASE_URL = 'https://iwxdxtomepjwtqqemgdn.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_sZav1GnM-eMG7t5cyEvMLw__phYz-rT';
     const supabase = window.__roeSupabaseClient || window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     if (!supabase) {
       document.getElementById('error').textContent = 'Authentication service failed to load. Check your internet connection and refresh.';
