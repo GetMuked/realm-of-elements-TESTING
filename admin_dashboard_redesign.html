@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+.dashboard-v2{display:grid;grid-template-columns:280px 1fr;min-height:100vh;background:#0d0b18;color:#fff}
+.admin-sidebar{padding:24px;border-right:1px solid rgba(255,255,255,.08);background:rgba(10,10,20,.95);display:flex;flex-direction:column;gap:10px}
+.sidebar-logo{font-size:24px;font-weight:800;padding:18px}
+.nav-item{background:#151329;border:1px solid rgba(255,255,255,.06);color:#fff;padding:14px;border-radius:12px;text-align:left;cursor:pointer}
+.nav-item:hover{background:#241f46}
+.dashboard-center{padding:40px}
+.hero-card,.config-panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:24px}
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+.config-item,.preview-btn{padding:14px;border-radius:12px;background:#1b1734;margin-top:10px}
+.layout-preview{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style>
+
+</head>
+<body>
+  <main class="page">
+    <section id="login" class="login-panel">
+      <div class="login-icon">ROE</div>
+      <p class="eyebrow">STAFF PORTAL</p>
+      <h1>Admin Dashboard</h1>
+      <input id="adminEmail" type="email" placeholder="Admin email" autocomplete="username">
+      <input id="passcode" type="password" placeholder="Enter admin password" autocomplete="current-password">
+      <button id="enter" type="button">Enter Dashboard</button>
+      <p id="error" aria-live="polite"></p><p style="margin-top:12px;text-align:center"><a href="index.html" style="color:#7289da;text-decoration:none">← Return to Portal</a></p>
+    </section>
+
+    <script>
+      // Authentication bootstrap: kept independent from the dashboard code so a dashboard
+      // initialization error can never disable the Admin login button.
+      (function () {
+        const url = 'https://fprspgulugqfcuhgzkux.supabase.co';
+        const key = 'sb_publishable_bGnodkfCOPt_mxelGVJCNg_8ya41kSF';
+        const client = window.supabase?.createClient(url, key);
+        window.__roeSupabaseClient = client;
+        const emailInput = document.getElementById('adminEmail');
+        const passwordInput = document.getElementById('passcode');
+        const button = document.getElementById('enter');
+        const errorBox = document.getElementById('error');
+        const loginPanel = document.getElementById('login');
+        const getDashboardPanel = () => document.getElementById('dashboard');
+
+        async function adminLogin() {
+          errorBox.textContent = '';
+          const email = emailInput.value.trim();
+          const password = passwordInput.value;
+          if (!email || !password) {
+            errorBox.textContent = 'Enter your admin email and password.';
+            return;
+          }
+          if (!client) {
+            errorBox.textContent = 'Authentication service did not load. Refresh the page and try again.';
+            return;
+          }
+          button.disabled = true;
+          button.textContent = 'Signing in...';
+          try {
+            const result = await client.auth.signInWithPassword({ email, password });
+            if (result.error || !result.data?.session) {
+              throw new Error(result.error?.message || 'Unable to sign in.');
+            }
+            const adminCheck = await client.rpc('is_roe_admin');
+            if (adminCheck.error) throw new Error(adminCheck.error.message);
+            if (!adminCheck.data) {
+              await client.auth.signOut();
+              throw new Error('This Supabase account is not authorized as an administrator.');
+            }
+            loginPanel.hidden = true;
+            getDashboardPanel().hidden = false;
+            passwordInput.value = '';
+            emailInput.value = '';
+          } catch (err) {
+            errorBox.textContent = err?.message || 'Unable to sign in.';
+          } finally {
+            button.disabled = false;
+            button.textContent = 'Enter Dashboard';
+          }
+        }
+        window.__roeAdminLogin = adminLogin;
+        button.addEventListener('click', adminLogin);
+        [emailInput, passwordInput].forEach(input => input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); adminLogin(); }
+        }));
+        if (!client) errorBox.textContent = 'Authentication service did not load. Refresh the page and try again.';
+        else client.auth.getSession().then(async ({ data }) => {
+          if (!data.session) return;
+          const check = await client.rpc('is_roe_admin');
+          if (check.data === true) { loginPanel.hidden = true; getDashboardPanel().hidden = false; }
+        }).catch(() => {});
+      })();
+    </script>
+
+    
+<section id="dashboard" class="dashboard dashboard-v2" hidden>
+  <aside class="admin-sidebar">
+    <div class="sidebar-logo">ROE</div>
+    <button id="moderationCard" class="nav-item" type="button">Moderation Records</button>
+    <button id="staffOverviewCard" class="nav-item" type="button">Staff Overview</button>
+    <button id="staffOnboardingCard" class="nav-item" type="button">Staff Onboarding</button>
+    <button id="handbookAdminCard" class="nav-item" type="button">Staff Handbook: Admin Edition</button>
+    <button id="tasksCard" class="nav-item" type="button">Administrative Tasks</button>
+    <button id="loginHistoryCard" class="nav-item" type="button">Login History</button>
+  </aside>
+
+  <div class="dashboard-center">
+    <div class="hero-card">
+      <h1>Staff Dashboard Configuration</h1>
+      <p>Manage the layout of the staff dashboard. Drag, reorder, enable, disable, and position staff-facing buttons.</p>
+    </div>
+
+    <div class="config-grid">
+      <div class="config-panel">
+        <h3>Available Staff Buttons</h3>
+        <div class="config-item">Announcements</div>
+        <div class="config-item">Staff Handbook</div>
+        <div class="config-item">Moderation Tools</div>
+        <div class="config-item">Resources</div>
+      </div>
+
+      <div class="config-panel">
+        <h3>Live Dashboard Layout</h3>
+        <div class="layout-preview">
+          <div class="preview-btn">Button 1</div>
+          <div class="preview-btn">Button 2</div>
+          <div class="preview-btn">Button 3</div>
+          <div class="preview-btn">Button 4</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+    <section id="moderation" class="moderation" hidden>
+      <aside class="files-sidebar">
+        <div class="sidebar-header">
+          <div>
+            <p class="eyebrow">MODERATION</p>
+            <h2>Records</h2>
+          </div>
+          <button id="createFile" class="plus-button" type="button" title="Create File" aria-label="Create File">+</button>
+        </div>
+        <div id="fileList" class="file-list"></div>
+      </aside>
+
+      <section class="records-area">
+        <div class="records-topbar">
+          <button id="backToDashboard" class="back-button" type="button">← Dashboard</button>
+          <div class="search-wrap">
+            <span>⌕</span>
+            <input id="fileSearch" type="search" placeholder="Search files by name..." autocomplete="off">
+          </div>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">▤</div>
+          <h2>No moderation file selected</h2>
+          <p>Create a file from the + button to start recording moderation actions.</p>
+        </div>
+
+        <section id="fileView" class="file-view" hidden>
+          <div class="file-header">
+            <div>
+              <p class="eyebrow">MODERATION FILE</p>
+              <h2 id="fileTitle"></h2>
+            </div>
+            <button id="createRecord" class="create-record" type="button"><span>+</span> New Record</button>
+          </div>
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Username</th>
+                  <th>Moderation Type</th>
+                  <th>Reason</th>
+                  <th>Offense</th>
+                  <th>Moderator</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </section>
+
+    <section id="tasks" class="tasks-page" hidden>
+      <div class="staff-topbar">
+        <button id="backFromTasks" class="back-button" type="button">← Dashboard</button>
+        <div>
+          <p class="eyebrow">ADMIN TASK HUB</p>
+          <h2>Tasks</h2>
+        </div>
+      </div>
+
+      <div class="tasks-toolbar">
+        <div>
+          <h1>Task Hub</h1>
+          <p>Keep track of the things you need to get done.</p>
+        </div>
+        <button id="addTask" class="create-record" type="button"><span>+</span> Add Task</button>
+      </div>
+
+      <div class="task-filters" role="tablist" aria-label="Task filters">
+        <button class="task-filter active" data-filter="all" type="button">All</button>
+        <button class="task-filter" data-filter="todo" type="button">To Do</button>
+        <button class="task-filter" data-filter="progress" type="button">In Progress</button>
+        <button class="task-filter" data-filter="completed" type="button">Completed</button>
+      </div>
+
+      <div id="taskList" class="task-list"></div>
+      <div id="taskEmpty" class="staff-empty" hidden><h3>No Tasks</h3><p>Add a task to start tracking your work.</p></div>
+    </section>
+
+    <section id="loginHistory" class="tasks-page" hidden>
+      <div class="staff-topbar">
+        <button id="backFromLoginHistory" class="back-button" type="button">← Dashboard</button>
+        <div>
+          <p class="eyebrow">SECURITY</p>
+          <h2>Login History</h2>
+        </div>
+      </div>
+      <div class="tasks-toolbar">
+        <div>
+          <h1>Login History</h1>
+          <p>Review staff dashboard authentication attempts.</p>
+        </div>
+      </div>
+      <div class="table-shell">
+        <table>
+          <thead><tr><th>Discord Username</th><th>Discord ID</th><th>Staff Username</th><th>Login Time</th><th>Result</th></tr></thead>
+          <tbody id="loginHistoryBody"></tbody>
+        </table>
+      </div>
+      <div id="loginHistoryEmpty" class="staff-empty" hidden><h3>No Login History</h3><p>No staff login attempts have been recorded yet.</p></div>
+    </section>
+
+    <section id="staffOnboarding" class="staff-onboarding" hidden>
+      <div class="staff-topbar">
+        <button id="backFromOnboarding" class="back-button" type="button">← Dashboard</button>
+        <div>
+          <p class="eyebrow">STAFF MANAGEMENT</p>
+          <h2>Staff Onboarding</h2>
+        </div>
+      </div>
+      <div class="onboarding-card">
+        <div class="onboarding-heading">
+          <p class="eyebrow">REALM OF ELEMENTS</p>
+          <h1>Realm of Elements: Staff Team</h1>
+          <p>Create a staff profile and activate their dashboard access.</p>
+        </div>
+        <form id="staffOnboardingForm" class="onboarding-form">
+          <label>
+            <span>What is their username?</span>
+            <input id="onboardUsername" type="text" autocomplete="off" required>
+          </label>
+          <label>
+            <span>What is their current position?</span>
+            <select id="onboardPosition" required>
+              <option value="Trial Staff">Trial Staff</option>
+              <option value="Staff">Staff</option>
+              <option value="Senior Staff">Senior Staff</option>
+            </select>
+          </label>
+          <label>
+            <span>What would you like their dashboard password to be?</span>
+            <input id="onboardPassword" type="password" autocomplete="new-password" required>
+          </label>
+          <button class="create-record onboarding-submit" type="submit">Create Staff Profile</button>
+          <p id="onboardingError" class="modal-error" aria-live="polite"></p>
+          <p id="onboardingSuccess" class="onboarding-success" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="staffOverview" class="staff-overview" hidden>
+      <div class="staff-topbar">
+        <button id="backFromStaff" class="back-button" type="button">← Dashboard</button>
+        <div>
+          <p class="eyebrow">STAFF MANAGEMENT</p>
+          <h2>Staff Overview</h2>
+        </div>
+      </div>
+
+      <div class="announcement-panel">
+        <div class="announcement-header">
+          <div>
+            <p class="eyebrow">STAFF COMMUNICATION</p>
+            <h3>Announcements</h3>
+            <p class="announcement-subtitle">Send an announcement to every active staff member's dashboard.</p>
+          </div>
+        </div>
+        <textarea id="announcementText" class="announcement-input" maxlength="1000" placeholder="Write an announcement..."></textarea>
+        <div class="announcement-actions">
+          <span id="announcementStatus" class="announcement-status" aria-live="polite"></span>
+          <button id="sendAnnouncement" class="primary" type="button">Send Announcement</button>
+        </div>
+      </div>
+
+      <div id="staffGrid" class="staff-grid"></div>
+    </section>
+
+    <section id="handbookAdmin" class="handbook-admin" hidden>
+      <div class="handbook-topbar">
+        <button id="backFromHandbook" class="back-button" type="button">← Dashboard</button>
+        <div>
+          <p class="eyebrow">STAFF HANDBOOK</p>
+          <h2>Informational Handbook: Admin Addition</h2>
+        </div>
+      </div>
+      <div class="notion-shell">
+        <aside class="notion-sidebar">
+          <div class="notion-sidebar-head"><strong>Pages</strong><button id="newHandbookPage" class="notion-add" type="button" title="New page">+</button></div>
+          <div id="handbookPages" class="handbook-pages"></div>
+        </aside>
+        <section class="notion-editor-panel">
+          <input id="handbookPageTitle" class="notion-title" type="text" placeholder="Untitled" maxlength="100">
+          <div class="notion-toolbar" role="toolbar" aria-label="Handbook formatting">
+            <button type="button" data-cmd="bold"><b>B</b></button>
+            <button type="button" data-cmd="italic"><i>I</i></button>
+            <button type="button" data-cmd="underline"><u>U</u></button>
+            <button type="button" data-cmd="formatBlock" data-value="H1">H1</button>
+            <button type="button" data-cmd="formatBlock" data-value="H2">H2</button>
+            <button type="button" data-cmd="insertUnorderedList">• List</button>
+            <button type="button" data-cmd="insertOrderedList">1. List</button>
+            <button id="insertDropdown" type="button">▾ Dropdown</button>
+            <button id="insertPageLink" type="button">🔗 Page Link</button>
+          </div>
+          <div id="handbookEditor" class="notion-editor" contenteditable="true" spellcheck="true"></div>
+          <div class="notion-footer"><span id="handbookSaveStatus">Saved</span><button id="saveHandbookPage" class="primary" type="button">Save Page</button></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="staffProfile" class="staff-profile" hidden>
+      <div class="staff-topbar">
+        <button id="backFromProfile" class="back-button" type="button">← Staff Overview</button>
+        <div>
+          <p class="eyebrow">STAFF PROFILE</p>
+          <h2 id="profilePageTitle">Staff Member</h2>
+        </div>
+      </div>
+      <div class="profile-card">
+        <div class="profile-heading">
+          <div>
+            <p class="eyebrow">ACTIVE STAFF MEMBER</p>
+            <h2 id="profileName"></h2>
+            <p id="profileUsername" class="profile-subtitle"></p>
+          </div>
+          <div id="profileStanding" class="staff-rank"></div>
+        </div>
+        <div class="profile-fields">
+          <div class="profile-field"><span>Rank</span><strong id="profileRank"></strong></div>
+          <div class="profile-field"><span>Username</span><strong id="profileUsernameField"></strong></div>
+          <div class="profile-field"><span>Password</span><strong id="profilePassword"></strong></div>
+          <div class="profile-field"><span>Strikes</span><strong id="profileStrikes"></strong></div>
+          <div class="profile-field"><span>Account Standing</span><strong id="profileStandingField"></strong></div>
+        </div>
+        <div class="profile-actions">
+          <button id="punishStaff" class="danger-button" type="button">Punish Staff Member</button>
+          <button id="deactivateStaff" class="danger-button" type="button">Deactivate Staff Member</button>
+        </div>
+        <div class="strike-history">
+          <h3>Strike History</h3>
+          <div id="strikeHistory"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="fileModal" class="modal" hidden>
+    <div class="modal-card">
+      <p class="eyebrow">NEW MODERATION FILE</p>
+      <h2>Create File</h2>
+      <input id="fileName" type="text" placeholder="File name" maxlength="80" autocomplete="off">
+      <div class="modal-actions">
+        <button id="cancelFile" class="secondary" type="button">Cancel</button>
+        <button id="saveFile" class="primary" type="button">Create File</button>
+      </div>
+      <p id="fileError" class="modal-error" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div id="punishModal" class="modal punish-modal" hidden>
+    <div class="modal-card">
+      <p class="eyebrow">STAFF DISCIPLINE</p>
+      <h2>Punish Staff Member</h2>
+      <p class="profile-subtitle">This will add one strike to the staff member's permanent profile history.</p>
+      <textarea id="strikeReason" placeholder="Enter the reason for this strike..."></textarea>
+      <div class="modal-actions">
+        <button id="cancelPunish" class="secondary" type="button">Cancel</button>
+        <button id="confirmPunish" class="danger-button" type="button">Issue Strike</button>
+      </div>
+      <p id="strikeError" class="modal-error" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div id="taskModal" class="modal" hidden>
+    <div class="modal-card task-modal-card">
+      <p class="eyebrow">TASK HUB</p>
+      <h2 id="taskModalTitle">Add Task</h2>
+      <label class="task-modal-label">Task Name<input id="taskName" type="text" maxlength="120" placeholder="What needs to be done?" autocomplete="off"></label>
+      <label class="task-modal-label">Description <span>(optional)</span><textarea id="taskDescription" maxlength="500" placeholder="Add any useful details..."></textarea></label>
+      <div class="task-modal-grid">
+        <label class="task-modal-label">Due Date<input id="taskDueDate" type="date"></label>
+        <label class="task-modal-label">Priority<select id="taskPriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>
+        <label class="task-modal-label">Status<select id="taskStatus"><option value="todo">To Do</option><option value="progress">In Progress</option><option value="completed">Completed</option></select></label>
+      </div>
+      <p id="taskError" class="modal-error" aria-live="polite"></p>
+      <div class="modal-actions">
+        <button id="cancelTask" class="secondary" type="button">Cancel</button>
+        <button id="saveTask" class="primary" type="button">Save Task</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+
+    const STORAGE_KEY = 'roe-moderation-files';
+    const passcode = document.getElementById('passcode');
+    const login = document.getElementById('login');
+    const dashboard = document.getElementById('dashboard');
+    const moderation = document.getElementById('moderation');
+    const error = document.getElementById('error');
+    const fileList = document.getElementById('fileList');
+    const fileSearch = document.getElementById('fileSearch');
+    const emptyState = document.getElementById('emptyState');
+    const fileView = document.getElementById('fileView');
+    const fileTitle = document.getElementById('fileTitle');
+    const recordsBody = document.getElementById('recordsBody');
+    const modal = document.getElementById('fileModal');
+    const fileName = document.getElementById('fileName');
+    const fileError = document.getElementById('fileError');
+
+    let files = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let selectedFileId = null;
+
+    function saveFiles() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(files));
+    }
+
+    document.getElementById('moderationCard').addEventListener('click', () => {
+      dashboard.hidden = true;
+      moderation.hidden = false;
+      renderFileList();
+    });
+
+    document.getElementById('backToDashboard').addEventListener('click', () => {
+      moderation.hidden = true;
+      dashboard.hidden = false;
+    });
+
+    document.getElementById('createFile').addEventListener('click', () => {
+      fileName.value = '';
+      fileError.textContent = '';
+      modal.hidden = false;
+      setTimeout(() => fileName.focus(), 0);
+    });
+
+    document.getElementById('cancelFile').addEventListener('click', () => modal.hidden = true);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
+
+    document.getElementById('saveFile').addEventListener('click', createFile);
+    fileName.addEventListener('keydown', e => { if (e.key === 'Enter') createFile(); });
+
+    function createFile() {
+      const name = fileName.value.trim();
+      if (!name) {
+        fileError.textContent = 'Enter a file name.';
+        return;
+      }
+      const file = { id: crypto.randomUUID(), name, records: [] };
+      files.unshift(file);
+      saveFiles();
+      modal.hidden = true;
+      selectedFileId = file.id;
+      renderFileList();
+      openFile(file.id);
+    }
+
+    fileSearch.addEventListener('input', renderFileList);
+
+    function renderFileList() {
+      const query = fileSearch.value.trim().toLowerCase();
+      fileList.innerHTML = '';
+      const filtered = files.filter(file => file.name.toLowerCase().includes(query));
+      if (!filtered.length) {
+        const empty = document.createElement('div');
+        empty.className = 'no-files';
+        empty.textContent = query ? 'No files found.' : 'No files created yet.';
+        fileList.appendChild(empty);
+        return;
+      }
+      filtered.forEach(file => {
+        const button = document.createElement('button');
+        button.className = 'file-item' + (file.id === selectedFileId ? ' active' : '');
+        button.type = 'button';
+        button.innerHTML = '<span class="file-dot">▤</span><span class="file-name"></span><span class="file-count"></span>';
+        button.querySelector('.file-name').textContent = file.name;
+        button.querySelector('.file-count').textContent = file.records.length;
+        button.addEventListener('click', () => openFile(file.id));
+        fileList.appendChild(button);
+      });
+    }
+
+    function openFile(id) {
+      const file = files.find(item => item.id === id);
+      if (!file) return;
+      selectedFileId = id;
+      emptyState.hidden = true;
+      fileView.hidden = false;
+      fileTitle.textContent = file.name;
+      renderFileList();
+      renderRecords(file);
+    }
+
+    document.getElementById('createRecord').addEventListener('click', () => {
+      const file = files.find(item => item.id === selectedFileId);
+      if (!file) return;
+      file.records.push({ userId: '', username: '', moderationType: 'warning', reason: '', offense: '1', moderator: '' });
+      saveFiles();
+      renderRecords(file);
+      renderFileList();
+      const last = recordsBody.lastElementChild;
+      if (last) last.querySelector('input')?.focus();
+    });
+
+    function renderRecords(file) {
+      recordsBody.innerHTML = '';
+      file.records.forEach((record, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><input data-field="userId" type="text" placeholder="User ID"></td>
+          <td><input data-field="username" type="text" placeholder="Username"></td>
+          <td><select data-field="moderationType"><option value="warning">Warning</option><option value="warning + mute">Warning + Mute</option><option value="ban">Ban</option></select></td>
+          <td><input data-field="reason" type="text" placeholder="Reason"></td>
+          <td><select data-field="offense"><option value="1">Offense 1</option><option value="2">Offense 2</option><option value="3">Offense 3</option><option value="4">Offense 4</option><option value="5">Offense 5</option></select></td>
+          <td><input data-field="moderator" type="text" placeholder="Moderator"></td>`;
+        row.querySelectorAll('[data-field]').forEach(control => {
+          const field = control.dataset.field;
+          control.value = record[field] ?? '';
+          control.addEventListener('input', () => { record[field] = control.value; saveFiles(); });
+          control.addEventListener('change', () => { record[field] = control.value; saveFiles(); });
+        });
+        recordsBody.appendChild(row);
+      });
+    }
+
+    // Tasks
+    const TASKS_KEY = 'roe-admin-tasks';
+    const tasksPage = document.getElementById('tasks');
+    const taskList = document.getElementById('taskList');
+    const taskEmpty = document.getElementById('taskEmpty');
+    const taskModal = document.getElementById('taskModal');
+    const taskModalTitle = document.getElementById('taskModalTitle');
+    const taskName = document.getElementById('taskName');
+    const taskDescription = document.getElementById('taskDescription');
+    const taskDueDate = document.getElementById('taskDueDate');
+    const taskPriority = document.getElementById('taskPriority');
+    const taskStatus = document.getElementById('taskStatus');
+    const taskError = document.getElementById('taskError');
+    let tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
+    let activeTaskFilter = 'all';
+    let editingTaskId = null;
+
+    function saveTasks() { localStorage.setItem(TASKS_KEY, JSON.stringify(tasks)); }
+    function taskStatusLabel(status) { return status === 'progress' ? 'In Progress' : status === 'completed' ? 'Completed' : 'To Do'; }
+    function taskPriorityLabel(priority) { return priority.charAt(0).toUpperCase() + priority.slice(1); }
+    function formatDueDate(value) {
+      if (!value) return 'No due date';
+      const d = new Date(value + 'T00:00:00');
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    function isOverdue(task) {
+      if (!task.dueDate || task.status === 'completed') return false;
+      const today = new Date(); today.setHours(0,0,0,0);
+      return new Date(task.dueDate + 'T00:00:00') < today;
+    }
+    function openTasks() {
+      dashboard.hidden = true; moderation.hidden = true; staffOverview.hidden = true; staffProfile.hidden = true; staffOnboarding.hidden = true; tasksPage.hidden = false;
+      renderTasks();
+    }
+    document.getElementById('tasksCard').addEventListener('click', openTasks);
+    document.getElementById('backFromTasks').addEventListener('click', () => { tasksPage.hidden = true; dashboard.hidden = false; });
+    document.querySelectorAll('.task-filter').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('.task-filter').forEach(b => b.classList.remove('active'));
+      button.classList.add('active'); activeTaskFilter = button.dataset.filter; renderTasks();
+    }));
+
+    function openTaskModal(task = null) {
+      editingTaskId = task ? task.id : null;
+      taskModalTitle.textContent = task ? 'Edit Task' : 'Add Task';
+      taskName.value = task?.name || ''; taskDescription.value = task?.description || ''; taskDueDate.value = task?.dueDate || '';
+      taskPriority.value = task?.priority || 'medium'; taskStatus.value = task?.status || 'todo'; taskError.textContent = ''; taskModal.hidden = false;
+      setTimeout(() => taskName.focus(), 0);
+    }
+    document.getElementById('addTask').addEventListener('click', () => openTaskModal());
+    document.getElementById('cancelTask').addEventListener('click', () => taskModal.hidden = true);
+    taskModal.addEventListener('click', e => { if (e.target === taskModal) taskModal.hidden = true; });
+    document.getElementById('saveTask').addEventListener('click', () => {
+      const name = taskName.value.trim();
+      if (!name) { taskError.textContent = 'Enter a task name.'; return; }
+      if (editingTaskId) {
+        const task = tasks.find(t => t.id === editingTaskId);
+        if (task) Object.assign(task, { name, description: taskDescription.value.trim(), dueDate: taskDueDate.value, priority: taskPriority.value, status: taskStatus.value });
+      } else {
+        tasks.unshift({ id: crypto.randomUUID(), name, description: taskDescription.value.trim(), dueDate: taskDueDate.value, priority: taskPriority.value, status: taskStatus.value, createdAt: new Date().toISOString() });
+      }
+      saveTasks(); taskModal.hidden = true; renderTasks();
+    });
+
+    function renderTasks() {
+      const visible = tasks.filter(t => activeTaskFilter === 'all' || t.status === activeTaskFilter);
+      taskList.innerHTML = ''; taskEmpty.hidden = visible.length !== 0;
+      visible.forEach(task => {
+        const card = document.createElement('article'); card.className = 'task-card' + (isOverdue(task) ? ' overdue' : '');
+        card.innerHTML = `<div class="task-main"><div class="task-title-row"><h3></h3><span class="task-priority"></span></div><p class="task-description"></p><div class="task-details"><span class="task-due"></span><span class="task-status"></span></div></div><div class="task-actions"><button class="task-edit" type="button">Edit</button><button class="task-complete" type="button"></button><button class="task-delete" type="button">Delete</button></div>`;
+        card.querySelector('h3').textContent = task.name; card.querySelector('.task-description').textContent = task.description || 'No description';
+        const p = card.querySelector('.task-priority'); p.textContent = taskPriorityLabel(task.priority); p.className = 'task-priority priority-' + task.priority;
+        const due = card.querySelector('.task-due'); due.textContent = task.dueDate ? (isOverdue(task) ? 'Overdue · ' : 'Due · ') + formatDueDate(task.dueDate) : 'No due date';
+        card.querySelector('.task-status').textContent = taskStatusLabel(task.status);
+        card.querySelector('.task-complete').textContent = task.status === 'completed' ? 'Reopen' : 'Complete';
+        card.querySelector('.task-edit').addEventListener('click', () => openTaskModal(task));
+        card.querySelector('.task-complete').addEventListener('click', () => { task.status = task.status === 'completed' ? 'todo' : 'completed'; saveTasks(); renderTasks(); });
+        card.querySelector('.task-delete').addEventListener('click', () => { if (confirm(`Delete task "${task.name}"?`)) { tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks(); } });
+        taskList.appendChild(card);
+      });
+    }
+
+    // Staff Handbook Admin Addition
+    const HANDBOOK_KEY = 'roe-staff-handbook';
+    const handbookAdmin = document.getElementById('handbookAdmin');
+    const handbookPagesEl = document.getElementById('handbookPages');
+    const handbookEditor = document.getElementById('handbookEditor');
+    const handbookPageTitle = document.getElementById('handbookPageTitle');
+    const handbookSaveStatus = document.getElementById('handbookSaveStatus');
+    let handbook = JSON.parse(localStorage.getItem(HANDBOOK_KEY) || 'null');
+    if (!handbook || !Array.isArray(handbook.pages)) handbook = { pages: [] };
+    let selectedHandbookPageId = null;
+    function saveHandbook() { localStorage.setItem(HANDBOOK_KEY, JSON.stringify(handbook)); }
+    function renderHandbookPages() {
+      handbookPagesEl.innerHTML = '';
+      handbook.pages.forEach(page => {
+        const button = document.createElement('button'); button.type='button'; button.className='handbook-page-item' + (page.id===selectedHandbookPageId?' active':'');
+        button.textContent = page.title || 'Untitled';
+        button.addEventListener('click', () => openHandbookPage(page.id));
+        handbookPagesEl.appendChild(button);
+      });
+      if (!handbook.pages.length) handbookPagesEl.innerHTML='<div class="handbook-pages-empty">No pages yet.<br>Use + to create one.</div>';
+    }
+    function openHandbookPage(id) {
+      const page=handbook.pages.find(p=>p.id===id); if(!page) return;
+      selectedHandbookPageId=id; handbookPageTitle.value=page.title||'Untitled'; handbookEditor.innerHTML=page.content||''; handbookSaveStatus.textContent='Saved'; renderHandbookPages();
+    }
+    function openHandbookAdmin() {
+      dashboard.hidden=true; moderation.hidden=true; staffOverview.hidden=true; staffProfile.hidden=true; staffOnboarding.hidden=true; tasksPage.hidden=true; handbookAdmin.hidden=false;
+      renderHandbookPages();
+      if (handbook.pages.length) openHandbookPage(selectedHandbookPageId && handbook.pages.some(p=>p.id===selectedHandbookPageId) ? selectedHandbookPageId : handbook.pages[0].id);
+      else { selectedHandbookPageId=null; handbookPageTitle.value=''; handbookEditor.innerHTML=''; handbookSaveStatus.textContent='No pages'; }
+    }
+    document.getElementById('handbookAdminCard').addEventListener('click', openHandbookAdmin);
+    document.getElementById('backFromHandbook').addEventListener('click', () => { handbookAdmin.hidden=true; dashboard.hidden=false; });
+    document.getElementById('newHandbookPage').addEventListener('click', () => {
+      const page={id:crypto.randomUUID(),title:'Untitled',content:''}; handbook.pages.push(page); saveHandbook(); openHandbookPage(page.id); setTimeout(()=>handbookPageTitle.focus(),0);
+    });
+    document.getElementById('saveHandbookPage').addEventListener('click', () => {
+      if(!selectedHandbookPageId) { handbookSaveStatus.textContent='Create a page first'; return; }
+      const page=handbook.pages.find(p=>p.id===selectedHandbookPageId); if(!page) return;
+      page.title=handbookPageTitle.value.trim()||'Untitled'; page.content=handbookEditor.innerHTML; saveHandbook(); renderHandbookPages(); handbookSaveStatus.textContent='Saved';
+    });
+    handbookPageTitle.addEventListener('input',()=>{handbookSaveStatus.textContent='Unsaved changes';});
+    handbookEditor.addEventListener('input',()=>{handbookSaveStatus.textContent='Unsaved changes';});
+    document.querySelectorAll('.notion-toolbar [data-cmd]').forEach(btn=>btn.addEventListener('click',()=>{
+      handbookEditor.focus(); document.execCommand(btn.dataset.cmd,false,btn.dataset.value||null); handbookSaveStatus.textContent='Unsaved changes';
+    }));
+    document.getElementById('insertDropdown').addEventListener('click',()=>{
+      handbookEditor.focus();
+      const details=document.createElement('details'); details.className='handbook-dropdown';
+      details.innerHTML='<summary>Dropdown</summary><div>Click here to add dropdown information.</div>';
+      const sel=window.getSelection(); if(sel && sel.rangeCount){const r=sel.getRangeAt(0); r.deleteContents(); r.insertNode(details); r.setStartAfter(details); r.collapse(true); sel.removeAllRanges(); sel.addRange(r);} else handbookEditor.appendChild(details);
+      handbookSaveStatus.textContent='Unsaved changes';
+    });
+    document.getElementById('insertPageLink').addEventListener('click',()=>{
+      if(!handbook.pages.length){ handbookSaveStatus.textContent='Create another page first'; return; }
+      const names=handbook.pages.filter(p=>p.id!==selectedHandbookPageId).map((p,i)=>`${i+1}. ${p.title||'Untitled'}`).join('\n');
+      const choice=prompt('Enter the page number to link to:\n\n'+names);
+      if(choice===null) return;
+      const index=parseInt(choice,10)-1;
+      const targets=handbook.pages.filter(p=>p.id!==selectedHandbookPageId);
+      const target=targets[index];
+      if(!target){ handbookSaveStatus.textContent='Invalid page selection'; return; }
+      const linkText=prompt('Text for the page link:', target.title||'Open page');
+      if(linkText===null) return;
+      handbookEditor.focus();
+      const sel=window.getSelection();
+      const link=document.createElement('a');
+      link.href='#'; link.className='handbook-internal-link'; link.dataset.handbookPage=target.id; link.textContent=linkText||target.title||'Open page';
+      if(sel && sel.rangeCount){ const r=sel.getRangeAt(0); r.deleteContents(); r.insertNode(link); r.setStartAfter(link); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); } else handbookEditor.appendChild(link);
+      handbookSaveStatus.textContent='Unsaved changes';
+    });
+
+    // Login History
+    const loginHistoryPage = document.getElementById('loginHistory');
+    const loginHistoryBody = document.getElementById('loginHistoryBody');
+    const loginHistoryEmpty = document.getElementById('loginHistoryEmpty');
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[char]));
+    }
+
+    async function renderLoginHistory() {
+      loginHistoryBody.innerHTML = '<tr><td colspan="5">Loading login history...</td></tr>';
+      loginHistoryEmpty.hidden = true;
+      if (!supabase) {
+        loginHistoryBody.innerHTML = '<tr><td colspan="5">Authentication service is unavailable.</td></tr>';
+        return;
+      }
+      const { data, error } = await supabase.rpc('get_login_history');
+      if (error) {
+        loginHistoryBody.innerHTML = `<tr><td colspan="5">Unable to load login history: ${escapeHtml(error.message)}</td></tr>`;
+        return;
+      }
+      if (!data?.length) {
+        loginHistoryBody.innerHTML = '';
+        loginHistoryEmpty.hidden = false;
+        return;
+      }
+      loginHistoryBody.innerHTML = data.map(entry => {
+        const result = String(entry.result || '').toLowerCase();
+        const resultText = result === 'successful' ? 'Successful' : 'Failed';
+        return `<tr>
+          <td>${escapeHtml(entry.discord_username || 'Unknown')}</td>
+          <td>${escapeHtml(entry.discord_id || 'Unknown')}</td>
+          <td>${escapeHtml(entry.staff_username || 'Unknown')}</td>
+          <td>${escapeHtml(entry.login_time ? new Date(entry.login_time).toLocaleString() : 'Unknown')}</td>
+          <td>${escapeHtml(resultText)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    document.getElementById('loginHistoryCard').addEventListener('click', () => {
+      dashboard.hidden = true;
+      moderation.hidden = true;
+      staffOverview.hidden = true;
+      staffProfile.hidden = true;
+      staffOnboarding.hidden = true;
+      tasksPage.hidden = true;
+      handbookAdmin.hidden = true;
+      loginHistoryPage.hidden = false;
+      renderLoginHistory();
+    });
+    document.getElementById('backFromLoginHistory').addEventListener('click', () => {
+      loginHistoryPage.hidden = true;
+      dashboard.hidden = false;
+    });
+
+    // Secure Supabase-backed staff management.
+    const SUPABASE_URL = 'https://fprspgulugqfcuhgzkux.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_bGnodkfCOPt_mxelGVJCNg_8ya41kSF';
+    const supabase = window.__roeSupabaseClient || window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    if (!supabase) {
+      document.getElementById('error').textContent = 'Authentication service failed to load. Check your internet connection and refresh.';
+    }
+
+    const staffOverview = document.getElementById('staffOverview');
+    const staffProfile = document.getElementById('staffProfile');
+    const staffGrid = document.getElementById('staffGrid');
+    const punishModal = document.getElementById('punishModal');
+    const strikeReason = document.getElementById('strikeReason');
+    const strikeError = document.getElementById('strikeError');
+    let staff = [];
+    let selectedStaffId = null;
+    const staffOnboarding = document.getElementById('staffOnboarding');
+    const onboardingForm = document.getElementById('staffOnboardingForm');
+    const onboardingUsername = document.getElementById('onboardUsername');
+    const onboardingPosition = document.getElementById('onboardPosition');
+    const onboardingPassword = document.getElementById('onboardPassword');
+    const onboardingError = document.getElementById('onboardingError');
+    const onboardingSuccess = document.getElementById('onboardingSuccess');
+
+    async function loadStaff() {
+      const { data, error } = await supabase.rpc('list_staff_members');
+      if (error) {
+        console.error(error);
+        staff = [];
+        staffGrid.innerHTML = '<div class="staff-empty"><h3>Unable to Load Staff</h3><p>Check the Supabase security migration and your admin account.</p></div>';
+        return false;
+      }
+      staff = data || [];
+      return true;
+    }
+
+    // Staff announcements remain non-sensitive browser content for now.
+    const ANNOUNCEMENTS_KEY = 'roe-staff-announcements';
+    const announcementText = document.getElementById('announcementText');
+    const announcementStatus = document.getElementById('announcementStatus');
+
+    function saveAnnouncements(announcements) {
+      localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+    }
+
+    document.getElementById('sendAnnouncement').addEventListener('click', () => {
+      const message = announcementText.value.trim();
+      announcementStatus.textContent = '';
+      if (!message) {
+        announcementStatus.textContent = 'Write an announcement first.';
+        announcementText.focus();
+        return;
+      }
+      const announcements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_KEY) || '[]');
+      announcements.push({ id: crypto.randomUUID(), message, date: new Date().toLocaleString() });
+      saveAnnouncements(announcements);
+      announcementText.value = '';
+      announcementStatus.textContent = 'Announcement sent to all active staff dashboards.';
+    });
+
+    function standingFor(strikes) {
+      if (strikes <= 0) return ['Good Standing', 'standing-good'];
+      if (strikes === 1) return ['On Notice', 'standing-notice'];
+      if (strikes === 2) return ['At Risk', 'standing-risk'];
+      return ['Removal Required', 'standing-removal'];
+    }
+
+    function showStaffOnboarding() {
+      dashboard.hidden = true; moderation.hidden = true; staffOverview.hidden = true; staffProfile.hidden = true; staffOnboarding.hidden = false;
+      onboardingError.textContent = '';
+      onboardingSuccess.textContent = '';
+      onboardingForm.reset();
+      setTimeout(() => onboardingUsername.focus(), 0);
+    }
+
+    document.getElementById('staffOnboardingCard').addEventListener('click', showStaffOnboarding);
+    document.getElementById('backFromOnboarding').addEventListener('click', () => {
+      staffOnboarding.hidden = true;
+      dashboard.hidden = false;
+    });
+
+    onboardingForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const username = onboardingUsername.value.trim();
+      const rank = onboardingPosition.value;
+      const password = onboardingPassword.value;
+      onboardingError.textContent = '';
+      onboardingSuccess.textContent = '';
+
+      if (!username || !password) {
+        onboardingError.textContent = 'Please complete every field.';
+        return;
+      }
+      if (password.length < 8) {
+        onboardingError.textContent = 'Staff passwords must be at least 8 characters.';
+        return;
+      }
+
+      const { error } = await supabase.rpc('create_staff_member', {
+        p_username: username,
+        p_rank: rank,
+        p_password: password
+      });
+
+      if (error) {
+        onboardingError.textContent = error.message || 'Unable to create staff profile.';
+        return;
+      }
+
+      onboardingForm.reset();
+      onboardingSuccess.textContent = `${username} has been added to the Staff Team. The password was securely hashed and cannot be viewed later.`;
+      await loadStaff();
+    });
+
+    async function showStaffOverview() {
+      dashboard.hidden = true; moderation.hidden = true; staffProfile.hidden = true; staffOnboarding.hidden = true; staffOverview.hidden = false;
+      await loadStaff();
+      renderStaff();
+    }
+
+    document.getElementById('staffOverviewCard').addEventListener('click', showStaffOverview);
+    document.getElementById('backFromStaff').addEventListener('click', () => { staffOverview.hidden = true; dashboard.hidden = false; });
+    document.getElementById('backFromProfile').addEventListener('click', () => { staffProfile.hidden = true; staffOverview.hidden = false; renderStaff(); });
+
+    function renderStaff() {
+      staffGrid.innerHTML = '';
+      if (!staff.length) {
+        staffGrid.innerHTML = '<div class="staff-empty"><h3>No Active Staff</h3><p>No staff members are currently activated. Staff added through Staff Onboarding will appear here.</p></div>';
+        return;
+      }
+      staff.forEach(member => {
+        const [standing, cls] = standingFor(member.strikes || 0);
+        const card = document.createElement('button');
+        card.type = 'button'; card.className = 'staff-card';
+        card.innerHTML = `
+          <div class="staff-card-top"><div><div class="staff-name"></div><div class="staff-username"></div></div><div class="staff-rank"></div></div>
+          <div class="staff-meta">
+            <div class="staff-stat"><span class="staff-stat-label">Password</span><span class="staff-stat-value password">Hidden</span></div>
+            <div class="staff-stat"><span class="staff-stat-label">Strikes</span><span class="staff-stat-value">${member.strikes || 0}</span></div>
+            <div class="staff-stat"><span class="staff-stat-label">Standing</span><span class="staff-stat-value ${cls}">${standing}</span></div>
+            <div class="staff-stat"><span class="staff-stat-label">Status</span><span class="staff-stat-value standing-good">Activated</span></div>
+          </div>`;
+        card.querySelector('.staff-name').textContent = member.username;
+        card.querySelector('.staff-username').textContent = '@' + member.username;
+        card.querySelector('.staff-rank').textContent = member.rank || 'Staff';
+        card.addEventListener('click', () => openStaffProfile(member.id));
+        staffGrid.appendChild(card);
+      });
+    }
+
+    function openStaffProfile(id) {
+      const member = staff.find(item => item.id === id);
+      if (!member) return;
+      selectedStaffId = id;
+      const [standing, cls] = standingFor(member.strikes || 0);
+      document.getElementById('profilePageTitle').textContent = member.username;
+      document.getElementById('profileName').textContent = member.username;
+      document.getElementById('profileUsername').textContent = '@' + member.username;
+      document.getElementById('profileRank').textContent = member.rank || 'Staff';
+      document.getElementById('profileUsernameField').textContent = member.username;
+      document.getElementById('profilePassword').textContent = 'Hidden — password hashes cannot be reversed';
+      document.getElementById('profileStrikes').textContent = member.strikes || 0;
+      document.getElementById('profileStanding').textContent = standing;
+      document.getElementById('profileStanding').className = 'staff-rank ' + cls;
+      document.getElementById('profileStandingField').textContent = standing;
+      document.getElementById('profileStandingField').className = cls;
+      renderStrikeHistory(member);
+      staffOverview.hidden = true; staffProfile.hidden = false;
+    }
+
+    function renderStrikeHistory(member) {
+      const history = document.getElementById('strikeHistory');
+      history.innerHTML = '';
+      const entries = Array.isArray(member.strike_history) ? member.strike_history : [];
+      if (!entries.length) { history.innerHTML = '<p class="profile-subtitle">No strikes have been recorded.</p>'; return; }
+      entries.slice().reverse().forEach((strike, i) => {
+        const entry = document.createElement('div'); entry.className = 'strike-entry';
+        entry.innerHTML = `<strong>Strike ${entries.length - i}</strong><small></small><div></div>`;
+        entry.querySelector('small').textContent = strike.date ? new Date(strike.date).toLocaleString() : '';
+        entry.querySelector('div').textContent = strike.reason || '';
+        history.appendChild(entry);
+      });
+    }
+
+    document.getElementById('punishStaff').addEventListener('click', () => {
+      strikeReason.value = ''; strikeError.textContent = ''; punishModal.hidden = false;
+      setTimeout(() => strikeReason.focus(), 0);
+    });
+    document.getElementById('cancelPunish').addEventListener('click', () => punishModal.hidden = true);
+    punishModal.addEventListener('click', e => { if (e.target === punishModal) punishModal.hidden = true; });
+    document.getElementById('confirmPunish').addEventListener('click', async () => {
+      const reason = strikeReason.value.trim();
+      if (!reason) { strikeError.textContent = 'Enter a reason for the strike.'; return; }
+      const member = staff.find(item => item.id === selectedStaffId);
+      if (!member) return;
+      const { error } = await supabase.rpc('punish_staff_member', { p_staff_id: member.id, p_reason: reason });
+      if (error) { strikeError.textContent = error.message || 'Unable to issue strike.'; return; }
+      await loadStaff();
+      punishModal.hidden = true;
+      openStaffProfile(member.id);
+    });
+
+    document.getElementById('deactivateStaff').addEventListener('click', async () => {
+      const member = staff.find(item => item.id === selectedStaffId);
+      if (!member) return;
+      if (!confirm(`Deactivate ${member.username}? This removes their active dashboard access.`)) return;
+      const { error } = await supabase.rpc('deactivate_staff_member', { p_staff_id: member.id });
+      if (error) { alert(error.message || 'Unable to deactivate staff member.'); return; }
+      selectedStaffId = null;
+      await loadStaff();
+      staffProfile.hidden = true; staffOverview.hidden = false; renderStaff();
+    });
+
+
+
+  
+    })();
+</script>
+</body>
+</html>
